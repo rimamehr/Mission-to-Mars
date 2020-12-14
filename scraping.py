@@ -10,6 +10,7 @@ def scrape_all():
     browser = Browser("chrome", executable_path="chromedriver", headless=True)
 
     news_title, news_paragraph = mars_news(browser)
+    hemisphere_image_urls = scrape(browser)
 
     # Run all scraping functions and store results in a dictionary
     data = {
@@ -17,12 +18,14 @@ def scrape_all():
         "news_paragraph": news_paragraph,
         "featured_image": featured_image(browser),
         "facts": mars_facts(),
-        "last_modified": dt.datetime.now()
+        "last_modified": dt.datetime.now(),
+        "image": hemisphere_image_urls
     }
 
     # Stop webdriver and return data
     browser.quit()
     return data
+    
 
 
 def mars_news(browser):
@@ -99,6 +102,41 @@ def mars_facts():
 
     # Convert dataframe into HTML format, add bootstrap
     return df.to_html(classes="table table-striped")
+
+def scrape(browser):
+    url = 'https://astrogeology.usgs.gov/search/results?q=hemisphere+enhanced&k1=target&v1=Mars'
+    browser.visit(url)
+
+    # 2. Create a list to hold the images and titles.
+    hemisphere_image_urls = []
+
+    # 3. Write code to retrieve the image urls and titles for each hemisphere.
+    html = browser.html
+    html_soup = soup(html, 'html.parser')
+
+    images = html_soup.find_all('div', class_='item')
+
+    base_url = 'https://astrogeology.usgs.gov'
+    for item in images:
+        
+        hemispheres ={}
+        # get link to each image page
+        image_url = base_url+item.find('a').get('href')
+        browser.visit(image_url)
+        
+        # from each image page get full resolution image url and title
+        image_html_soup = soup(browser.html, 'html.parser')
+        link = base_url+image_html_soup.find('img', class_='wide-image').get('src')
+        
+        hemispheres['img_url'] = link
+        # get title
+        title = image_html_soup.find('h2', class_='title').text
+        hemispheres['title'] = title
+        
+        hemisphere_image_urls.append(hemispheres)
+        browser.back()
+    
+    return hemisphere_image_urls
 
 if __name__ == "__main__":
 
